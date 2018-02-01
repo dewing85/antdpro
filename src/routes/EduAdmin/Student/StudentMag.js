@@ -1,7 +1,7 @@
 import React, { PureComponent, Fragment } from 'react';
 import { connect } from 'dva';
 import moment from 'moment';
-import { Row, Col, Card, Form, Input, Select, Icon, Button, Dropdown, Menu, InputNumber, DatePicker, Modal, message, Badge, Divider ,Popconfirm} from 'antd';
+import { Row, Col, Card, Form, Input, Select, Icon, Button, Dropdown, Menu, InputNumber, DatePicker, Modal, message, Badge, Divider, Popconfirm } from 'antd';
 import StandardTable from '../../../components/StandardTable';
 import PageHeaderLayout from '../../../layouts/PageHeaderLayout';
 
@@ -73,6 +73,17 @@ const status = ['--', '多次重修', '签证即将到期', '需要调班'];
 //   },
 // ];
 
+const EditableCell = ({ editable, value, onChange }) => {
+  return (
+    <div>
+      {editable
+        ? <Input style={{ margin: '-5px 0' }} value={value} onChange={e => onChange(e.target.value)} />
+        : value
+      }
+    </div>
+  )
+};
+
 const CreateForm = Form.create()((props) => {
   const { modalVisible, form, handleAdd, handleModalVisible } = props;
   const okHandle = () => {
@@ -98,19 +109,19 @@ const CreateForm = Form.create()((props) => {
           rules: [{ required: true, message: 'Please input some description...' }],
         })(
           <Input placeholder="请输入" />
-        )}
+          )}
       </FormItem>
     </Modal>
   );
 });
 
 const CreateChangeForm = Form.create()((props) => {
-  const { changemodalVisible, form, handleAdd, handlechangeModalVisible,id,course } = props;
+  const { changemodalVisible, form, handleAdd, handlechangeModalVisible, id, course } = props;
   const okHandle = () => {
     form.validateFields((err, fieldsValue) => {
       if (err) return;
       console.log(fieldsValue);
-      handleAdd(fieldsValue,id);
+      handleAdd(fieldsValue, id);
     });
   };
   return (
@@ -118,9 +129,9 @@ const CreateChangeForm = Form.create()((props) => {
       title="转班"
       visible={changemodalVisible}
       onOk={okHandle}
-      onCancel={() => handlechangeModalVisible(false,id)}
+      onCancel={() => handlechangeModalVisible(false, id)}
     >
-    
+
 
       <FormItem
         labelCol={{ span: 5 }}
@@ -142,7 +153,7 @@ const CreateChangeForm = Form.create()((props) => {
             <Option value="1">软件工程师旗舰核心课程2017Fall01、全栈开发</Option>
             <Option value="2">人工智能与数据科学强化课程2017Fall01</Option>
           </Select>
-        )}
+          )}
       </FormItem>
     </Modal>
   );
@@ -155,10 +166,12 @@ const CreateChangeForm = Form.create()((props) => {
 @Form.create()
 export default class StudentMag extends PureComponent {
   state = {
+    data:[],
+    cacheData:[],
     modalVisible: false,
     changemodalVisible: false,
-    changeid:0,
-    changecourse:'',
+    changeid: 0,
+    changecourse: '',
     expandForm: false,
     selectedRows: [],
     formValues: {},
@@ -271,13 +284,13 @@ export default class StudentMag extends PureComponent {
   }
 
   handleModalVisible = (flag) => {
-    window.location.href="#/eduadmin/studentadd";
+    window.location.href = "#/eduadmin/studentadd";
     // this.setState({
     //   modalVisible: !!flag,
     // });
   }
 
-  handlechangeModalVisible = (flag,id,course) => {
+  handlechangeModalVisible = (flag, id, course) => {
     this.setState({
       changeid: id,
       changecourse: course,
@@ -285,7 +298,7 @@ export default class StudentMag extends PureComponent {
     });
   }
 
-  removeStudent=(id)=>{
+  removeStudent = (id) => {
     const { dispatch } = this.props;
     dispatch({
       type: 'student/remove',
@@ -293,7 +306,7 @@ export default class StudentMag extends PureComponent {
         id: id,
       },
       callback: () => {
-        message.success('删除成功'+id);
+        message.success('删除成功' + id);
         // this.setState({
         //   selectedRows: [],
         // });
@@ -302,15 +315,15 @@ export default class StudentMag extends PureComponent {
 
   }
 
-  handleAdd = (fields,id) => {
-    console.log("cid:"+fields.courseid+"  id:"+id);
+  handleAdd = (fields, id) => {
+    console.log("cid:" + fields.courseid + "  id:" + id);
     this.props.dispatch({
       type: 'student/updatecourseid',
       payload: {
         courseid: fields.courseid,
         id: id,
       },
-      callback:()=>{
+      callback: () => {
         message.success('添加成功');
         this.setState({
           modalVisible: false,
@@ -319,13 +332,13 @@ export default class StudentMag extends PureComponent {
     });
   }
 
-  handleChange = (fields) =>{
+  handleChange = (fields) => {
     this.props.dispatch({
       type: 'student/add',
       payload: {
         description: fields.desc,
       },
-      callback:()=>{
+      callback: () => {
         message.success('修改成功');
         this.setState({
           changemodalVisible: false,
@@ -383,12 +396,89 @@ export default class StudentMag extends PureComponent {
     );
   }
 
+  handleItemChange(value, key, column) {
+    console.log(value);
+    const newData = [...this.state.data.list];
+    const target = newData.filter(item => key === item.key)[0];
+    if (target) {
+      target[column] = value;
+      this.setState({ data: newData });
+    }
+  }
+
+  renderColumns(text, record, column) {
+    return (
+      <div>
+        <EditableCell
+          editable={record.editable}
+          value={text}
+          onChange={value => this.handleItemChange(value, record.key, column)}
+        />
+      </div>
+    );
+  }
+
+  edit(key) {
+    const newData = [...this.state.data.list];
+    const target = newData.filter(item => key === item.key)[0];
+    console.log(target);
+    if (target) {
+      target.editable = true;
+      this.setState({ data: {list:newData} });
+    }
+  }
+  save(key) {
+    const newData = [...this.state.data.list];
+    const target = newData.filter(item => key === item.key)[0];
+    if (target) {
+      this.handleFormReset();
+      // delete target.editable;
+      // this.setState({ data: newData });
+      // this.cacheData = newData.map(item => ({ ...item }));
+    }
+  }
+  cancel(key) {
+    const newData = [...this.state.data.list];
+    const target = newData.filter(item => key === item.key)[0];
+    if (target) {
+      this.handleFormReset();
+      // Object.assign(target, this.cacheData.filter(item => key === item.key)[0]);
+      // delete target.editable;
+      // this.setState({ data: {list:newData} });
+    }
+  }
+
   render() {
+
+
+    const { student: { data }, loading } = this.props;
+    const { selectedRows, modalVisible, changemodalVisible, changeid, changecourse } = this.state;
+
+    const menu = (
+      <Menu onClick={this.handleMenuClick} selectedKeys={[]}>
+        <Menu.Item key="remove">删除</Menu.Item>
+        <Menu.Item key="approval">批量审批</Menu.Item>
+      </Menu>
+    );
+
+    const parentMethods = {
+      handleAdd: this.handleAdd,
+      handleModalVisible: this.handleModalVisible,
+    };
+    const parentMethods2 = {
+      handleAdd: this.handleAdd,
+      handlechangeModalVisible: this.handlechangeModalVisible,
+    };
 
     const columns = [
       {
         title: '姓名',
         dataIndex: 'name',
+        render: (text, record, index) => {
+          return (
+            this.renderColumns(text, record, 'name')
+          )
+        },
       },
       {
         title: '学号',
@@ -396,11 +486,21 @@ export default class StudentMag extends PureComponent {
       },
       {
         title: '邮件',
-        dataIndex: 'emaill',
+        dataIndex: 'email',
+        render: (text, record, index) => {
+          return (
+            this.renderColumns(text, record, 'email')
+          )
+        },
       },
       {
         title: '电话',
         dataIndex: 'tel',
+        render: (text, record, index) => {
+          return (
+            this.renderColumns(text, record, 'tel')
+          )
+        },
       },
       {
         title: '课程',
@@ -436,43 +536,46 @@ export default class StudentMag extends PureComponent {
         render: (text, record, index) => {
           const id = record.id;
           const course = record.course;
-          return(
+          const { editable } = record;
+          return (
             <Fragment>
+              <div className="editable-row-operations">
+                {
+                  editable ?
+                    <span>
+                      <a onClick={() => this.save(record.key)}>Save</a>
+                      <Popconfirm title="Sure to cancel?" onConfirm={() => this.cancel(record.key)}>
+                        <a>Cancel</a>
+                      </Popconfirm>
+                    </span>
+                    : <a onClick={() => this.edit(record.key)}>{record.key}Edit</a>
+                }
+              </div>
+
               <a href="" >详情</a>
               <Divider type="vertical" />
               <Popconfirm title="确定删除?" onConfirm={() => this.removeStudent(id)}>
                 <a>删除</a>
               </Popconfirm>
               <Divider type="vertical" />
-              <a onClick={() => this.handlechangeModalVisible(true,id,course)}>转班</a>
+              <a onClick={() => this.handlechangeModalVisible(true, id, course)}>转班</a>
             </Fragment>
           )
         },
       },
     ];
-    
-    const { student: { data }, loading } = this.props;
-    const { selectedRows, modalVisible, changemodalVisible, changeid, changecourse } = this.state;
+    console.log(data.list);
 
-    const menu = (
-      <Menu onClick={this.handleMenuClick} selectedKeys={[]}>
-        <Menu.Item key="remove">删除</Menu.Item>
-        <Menu.Item key="approval">批量审批</Menu.Item>
-      </Menu>
-    );
+    // if (data.list.length > 0) {
+      this.state.data = data;
+      // console.log(data.list.map(item => ({ ...item })));
+      this.state.cacheData = data.list.map(item => ({ ...item }));
 
-    const parentMethods = {
-      handleAdd: this.handleAdd,
-      handleModalVisible: this.handleModalVisible,
-    };
-    const parentMethods2 = {
-      handleAdd: this.handleAdd,
-      handlechangeModalVisible: this.handlechangeModalVisible,
-    };
+    // }
 
     return (
       <div>
-      {/* <PageHeaderLayout title="学生管理"> */}
+        {/* <PageHeaderLayout title="学生管理"> */}
         <Card bordered={false}>
           <div className={styles.tableList}>
             <div className={styles.tableListForm}>
@@ -515,7 +618,7 @@ export default class StudentMag extends PureComponent {
           course={changecourse}
           changemodalVisible={changemodalVisible}
         />
-      {/* </PageHeaderLayout> */}
+        {/* </PageHeaderLayout> */}
       </div>
     );
   }
